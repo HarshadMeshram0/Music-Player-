@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hindi Music Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #1d2b64, #f8cdda);
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 40px;
+    }
+    .player {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 25px;
+      border-radius: 20px;
+      width: 320px;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.2);
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+    .title {
+      font-size: 1.3em;
+      font-weight: bold;
+      color: #ffe066;
+      margin-bottom: 5px;
+    }
+    .artist {
+      font-size: 1em;
+      color: #f4f4f4;
+      margin-bottom: 15px;
+    }
+    .controls button {
+      background: linear-gradient(145deg, #ff416c, #ff4b2b);
+      color: white;
+      padding: 10px 16px;
+      margin: 0 5px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 15px rgba(255, 65, 108, 0.3);
+    }
+    .controls button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 20px rgba(255, 65, 108, 0.5);
+    }
+    .progress-container {
+      width: 100%;
+      height: 6px;
+      background: #aaa;
+      margin: 15px 0;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .progress {
+      height: 6px;
+      width: 0%;
+      background: #00e676;
+      transition: width 0.3s ease;
+    }
+    .time {
+      font-size: 0.8em;
+      display: flex;
+      justify-content: space-between;
+      color: #ddd;
+    }
+    input[type=range] {
+      width: 100%;
+      margin: 10px 0;
+      accent-color: #00e5ff;
+    }
+    .playlist {
+      margin-top: 20px;
+      text-align: left;
+      max-height: 150px;
+      overflow-y: auto;
+      padding: 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+    }
+    .playlist li {
+      list-style: none;
+      padding: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #444;
+      color: #eee;
+      transition: background 0.2s ease;
+    }
+    .playlist li:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .playlist li.active {
+      color: #00e676;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+<div class="player">
+  <div class="title" id="title">Song Title</div>
+  <div class="artist" id="artist">Artist Name</div>
+  <div class="progress-container" onclick="setProgress(event)">
+    <div class="progress" id="progress"></div>
+  </div>
+  <div class="time">
+    <span id="currentTime">0:00</span>
+    <span id="duration">0:00</span>
+  </div>
+  <div class="controls">
+    <button onclick="prevSong()">⏮</button>
+    <button onclick="togglePlay()" id="playBtn">▶</button>
+    <button onclick="nextSong()">⏭</button>
+  </div>
+  <input type="range" id="volume" min="0" max="1" step="0.01" value="1" />
+  <ul class="playlist" id="playlist"></ul>
+</div>
+
+<footer>Created by <strong>Harshad Meshram</strong></footer>
+
+<audio id="audio"></audio>
+
+<script>
+  const audio = document.getElementById('audio');
+  const title = document.getElementById('title');
+  const artist = document.getElementById('artist');
+  const playBtn = document.getElementById('playBtn');
+  const progress = document.getElementById('progress');
+  const progressContainer = document.querySelector('.progress-container');
+  const currentTimeEl = document.getElementById('currentTime');
+  const durationEl = document.getElementById('duration');
+  const volume = document.getElementById('volume');
+  const playlistUI = document.getElementById('playlist');
+
+  const songs = [
+    {
+      title: "Tum Hi Ho",
+      artist: "Arijit Singh",
+      src: "https://pagalfree.com/musics/128-Tum Hi Ho - Aashiqui 2 128 Kbps.mp3"
+    },
+    {
+      title: "Kesariya",
+      artist: "Arijit Singh",
+      src: "https://pagalfree.com/musics/128-Kesariya - Brahmastra 128 Kbps.mp3"
+    },
+    {
+      title: "Raataan Lambiyan",
+      artist: "Jubin Nautiyal, Asees Kaur",
+      src: "https://pagalfree.com/musics/128-Raataan Lambiyan - Shershaah 128 Kbps.mp3"
+    },
+    {
+      title: "Tera Ban Jaunga",
+      artist: "Akhil Sachdeva",
+      src: "https://pagalfree.com/musics/128-Tera Ban Jaunga - Kabir Singh 128 Kbps.mp3"
+    },
+    {
+      title: "Agar Tum Saath Ho",
+      artist: "Alka Yagnik, Arijit Singh",
+      src: "https://pagalfree.com/musics/128-Agar Tum Saath Ho - Tamasha 128 Kbps.mp3"
+    },
+    {
+      title: "Tujhe Kitna Chahne Lage",
+      artist: "Arijit Singh",
+      src: "https://pagalfree.com/musics/128-Tujhe Kitna Chahne Lage - Kabir Singh 128 Kbps.mp3"
+    },
+    {
+      title: "Channa Mereya",
+      artist: "Arijit Singh",
+      src: "https://pagalfree.com/musics/128-Channa Mereya - Ae Dil Hai Mushkil 128 Kbps.mp3"
+    },
+    {
+      title: "Kaise Hua",
+      artist: "Vishal Mishra",
+      src: "https://pagalfree.com/musics/128-Kaise Hua - Kabir Singh 128 Kbps.mp3"
+    },
+    {
+    title: "Raabta",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Raabta - Agent Vinod 128 Kbps.mp3"
+  },
+  {
+    title: "Tera Yaar Hoon Main",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Tera Yaar Hoon Main - Sonu Ke Titu Ki Sweety 128 Kbps.mp3"
+  },
+   {
+    title: "Ae Dil Hai Mushkil",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Ae Dil Hai Mushkil Title Track - Ae Dil Hai Mushkil 128 Kbps.mp3"
+  },
+   {
+    title: "Pal",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Pal - Jalebi 128 Kbps.mp3"
+  },
+   {
+    title: "Zaalima",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Zaalima - Raees 128 Kbps.mp3"
+  },
+   {
+    title: "Bekhayali",
+    artist: "Sachet Tandon",
+    src: "https://pagalfree.com/musics/128-Bekhayali - Kabir Singh 128 Kbps.mp3"
+  },
+   {
+    title: "Ve Maahi",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Ve Maahi - Kesari 128 Kbps.mp3"
+  },
+  {
+    title: "Dil Diyan Gallan",
+    artist: "Atif Aslam",
+    src: "https://pagalfree.com/musics/128-Dil Diyan Gallan - Tiger Zinda Hai 128 Kbps.mp3"
+  },
+   {
+    title: "Jeene Laga Hoon",
+    artist: "Atif Aslam",
+    src: "https://pagalfree.com/musics/128-Jeene Laga Hoon - Ramaiya Vastavaiya 128 Kbps.mp3"
+  },
+  {
+  title: "Wajah Tum Ho",
+  artist: "Arijit Singh",
+  src: "https://pagalfree.com/musics/128-Wajah Tum Ho - Hate Story 3 128 Kbps.mp3"
+},
+   {
+    title: "Sun Saathiya",
+    artist: "Priya Saraiya",
+    src: "https://pagalfree.com/musics/128-Sun Saathiya - ABCD 2 128 Kbps.mp3"
+  },
+  {
+  title: "Soch Na Sake",
+  artist: "Arijit Singh, Tulsi Kumar",
+  src: "https://pagalfree.com/musics/128-Soch Na Sake - Airlift 128 Kbps.mp3"
+},
+  {
+    title: "Enna Sona",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Enna Sona - OK Jaanu 128 Kbps.mp3"
+  },
+   {
+    title: "Khairiyat",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Khairiyat - Chhichhore 128 Kbps.mp3"
+  },
+  {
+    title: "Tum Mile",
+    artist: "Neeraj Shridhar",
+    src: "https://pagalfree.com/musics/128-Tum Mile - Tum Mile 128 Kbps.mp3"
+  },
+  {
+    title: "Tera Hone Laga Hoon",
+    artist: "Atif Aslam",
+    src: "https://pagalfree.com/musics/128-Tera Hone Laga Hoon - Ajab Prem Ki Ghazab Kahani 128 Kbps.mp3"
+  },
+  {
+  title: "Dilbaro",
+  artist: "Harshdeep Kaur, Vibha Saraf",
+  src: "https://pagalfree.com/musics/128-Dilbaro - Raazi 128 Kbps.mp3"
+},
+  {
+    title: "Galliyan",
+    artist: "Ankit Tiwari",
+    src: "https://pagalfree.com/musics/128-Galliyan - Ek Villain 128 Kbps.mp3"
+  },
+  {
+    title: "Humdard",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Humdard - Ek Villain 128 Kbps.mp3"
+  },
+   {
+    title: "Sooraj Dooba Hain",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Sooraj Dooba Hain - Roy 128 Kbps.mp3"
+  },
+  {
+    title: "Sanam Re",
+    artist: "Arijit Singh",
+    src: "https://pagalfree.com/musics/128-Sanam Re - Sanam Re 128 Kbps.mp3"
+  },
+  {
+  title: "Ghungroo",
+  artist: "Arijit Singh, Shilpa Rao",
+  src: "https://pagalfree.com/musics/128-Ghungroo - War 128 Kbps.mp3"
+},
+  ];
+
+  let songIndex = 0;
+
+  function loadSong(song) {
+    title.textContent = song.title;
+    artist.textContent = song.artist;
+    audio.src = song.src;
+    updatePlaylist();
+  }
+
+  function playSong() {
+    audio.play();
+    playBtn.textContent = '⏸';
+  }
+
+  function pauseSong() {
+    audio.pause();
+    playBtn.textContent = '▶';
+  }
+
+  function togglePlay() {
+    if (audio.paused) {
+      playSong();
+    } else {
+      pauseSong();
+    }
+  }
+
+  function prevSong() {
+    songIndex = (songIndex - 1 + songs.length) % songs.length;
+    loadSong(songs[songIndex]);
+    playSong();
+  }
+
+  function nextSong() {
+    songIndex = (songIndex + 1) % songs.length;
+    loadSong(songs[songIndex]);
+    playSong();
+  }
+
+  function updateProgress() {
+    const { duration, currentTime } = audio;
+    const percent = (currentTime / duration) * 100;
+    progress.style.width = percent + "%";
+    currentTimeEl.textContent = formatTime(currentTime);
+    durationEl.textContent = formatTime(duration);
+  }
+
+  function setProgress(e) {
+    const width = progressContainer.clientWidth;
+    const clickX = e.offsetX;
+    const duration = audio.duration;
+    audio.currentTime = (clickX / width) * duration;
+  }
+
+  function formatTime(t) {
+    if (isNaN(t)) return "0:00";
+    const min = Math.floor(t / 60);
+    const sec = Math.floor(t % 60).toString().padStart(2, "0");
+    return ${min}:${sec};
+  }
+
+  function updatePlaylist() {
+    playlistUI.innerHTML = "";
+    songs.forEach((s, i) => {
+      const li = document.createElement("li");
+      li.textContent = ${s.title} - ${s.artist};
+      if (i === songIndex) li.classList.add("active");
+      li.onclick = () => {
+        songIndex = i;
+        loadSong(songs[songIndex]);
+        playSong();
+      };
+      playlistUI.appendChild(li);
+    });
+  }
+
+  volume.addEventListener("input", () => {
+    audio.volume = volume.value;
+  });
+
+  audio.addEventListener("timeupdate", updateProgress);
+  audio.addEventListener("ended", nextSong);
+
+  loadSong(songs[songIndex]);
+</script>
+</body>
+</html>
